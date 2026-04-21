@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EduLearn LMS — Student Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    /* =============================================
+       GLOBAL DESIGN TOKENS & CUSTOM STYLES
+       ============================================= */
+    :root {
+      --primary: #2563eb;
+      --primary-light: #dbeafe;
+      --accent: #0ea5e9;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+      --sidebar-w: 280px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Sora', sans-serif;
+      background: #f0f4f8;
+      color: #1e293b;
+    }
+    code, .mono { font-family: 'DM Mono', monospace; }
+
+    /* Sidebar */
+    #sidebar {
+      width: var(--sidebar-w);
+      min-height: 100vh;
+      background: #1e293b;
+      position: fixed;
+      left: 0; top: 0;
+      overflow-y: auto;
+      z-index: 100;
+      transition: transform 0.3s ease;
+    }
+    #sidebar.hidden-mobile { transform: translateX(-100%); }
+    #main-content {
+      margin-left: var(--sidebar-w);
+      min-height: 100vh;
+      transition: margin-left 0.3s ease;
+    }
+    @media (max-width: 768px) {
+      #sidebar { transform: translateX(-100%); }
+      #sidebar.open { transform: translateX(0); }
+      #main-content { margin-left: 0; }
+    }
+
+    /* Sidebar items */
+    .nav-class-btn {
+      width: 100%;
+      text-align: left;
+      padding: 10px 16px;
+      color: #94a3b8;
+      font-weight: 600;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: color 0.2s;
+      background: none;
+      border: none;
+    }
+    .nav-class-btn:hover, .nav-class-btn.active { color: #f8fafc; }
+    .nav-subject-btn {
+      width: 100%;
+      text-align: left;
+      padding: 8px 24px;
+      color: #cbd5e1;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      background: none;
+      border: none;
+      transition: all 0.2s;
+      border-radius: 0;
+    }
+    .nav-subject-btn:hover { color: #f1f5f9; background: rgba(255,255,255,0.05); }
+    .nav-subject-btn.active { color: #60a5fa; }
+    .nav-chapter-btn {
+      width: 100%;
+      text-align: left;
+      padding: 7px 36px;
+      color: #94a3b8;
+      font-size: 13px;
+      cursor: pointer;
+      background: none;
+      border: none;
+      border-left: 2px solid transparent;
+      transition: all 0.2s;
+    }
+    .nav-chapter-btn:hover { color: #e2e8f0; border-left-color: #3b82f6; }
+    .nav-chapter-btn.active { color: #93c5fd; border-left-color: #3b82f6; background: rgba(59,130,246,0.1); }
+
+    /* Tab buttons */
+    .tab-btn {
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px 8px 0 0;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      transition: all 0.2s;
+      border-bottom: 3px solid transparent;
+    }
+    .tab-btn:hover { color: #2563eb; }
+    .tab-btn.active { color: #2563eb; border-bottom-color: #2563eb; background: white; }
+
+    /* Video playlist */
+    .playlist-item {
+      padding: 12px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 1px solid transparent;
+      margin-bottom: 6px;
+    }
+    .playlist-item:hover { background: #eff6ff; border-color: #bfdbfe; }
+    .playlist-item.active { background: #dbeafe; border-color: #3b82f6; }
+    .playlist-item .video-num {
+      width: 24px; height: 24px;
+      background: #e2e8f0;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 700; color: #475569;
+      flex-shrink: 0;
+    }
+    .playlist-item.active .video-num { background: #2563eb; color: white; }
+
+    /* MCQ styles */
+    .mcq-option {
+      padding: 12px 16px;
+      border: 2px solid #e2e8f0;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .mcq-option:hover { border-color: #93c5fd; background: #eff6ff; }
+    .mcq-option.selected { border-color: #2563eb; background: #dbeafe; }
+    .mcq-option.correct-ans { border-color: #10b981; background: #d1fae5; }
+    .mcq-option.wrong-ans { border-color: #ef4444; background: #fee2e2; }
+    .mcq-option.show-correct { border-color: #10b981; background: #d1fae5; }
+
+    /* CQ styles */
+    .cq-card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; }
+    .answer-box { background: #f8fafc; border-left: 4px solid #2563eb; padding: 16px; border-radius: 0 8px 8px 0; font-size: 14px; line-height: 1.7; white-space: pre-line; }
+    .ai-badge { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 2px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+
+    /* Progress bar */
+    .progress-bar { height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden; }
+    .progress-fill { height: 100%; background: linear-gradient(90deg, #2563eb, #0ea5e9); border-radius: 3px; transition: width 0.5s ease; }
+
+    /* Score card */
+    .score-card { background: linear-gradient(135deg, #1e40af, #0369a1); color: white; border-radius: 16px; padding: 28px; text-align: center; }
+
+    /* Breadcrumb */
+    .breadcrumb span { color: #94a3b8; font-size: 13px; }
+    .breadcrumb span.active { color: #2563eb; font-weight: 600; }
+    .breadcrumb-sep { color: #cbd5e1; margin: 0 6px; }
+
+    /* Animations */
+    .fade-in { animation: fadeIn 0.3s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    .slide-in { animation: slideIn 0.3s ease; }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    #sidebar::-webkit-scrollbar-thumb { background: #475569; }
+
+    /* Mobile overlay */
+    #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 99; }
+    #overlay.show { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- =============================================
+     MOBILE OVERLAY (closes sidebar on tap)
+     ============================================= -->
+<div id="overlay" onclick="closeSidebar()"></div>
+
+<!-- =============================================
+     SIDEBAR NAVIGATION
+     ============================================= -->
+<aside id="sidebar">
+  <!-- Logo -->
+  <div class="px-5 py-5 border-b border-slate-700">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">E</div>
+      <div>
+        <div class="text-white font-bold text-base leading-tight">EduLearn</div>
+        <div class="text-slate-400 text-xs">Learning Portal</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation Tree (dynamically rendered) -->
+  <nav id="nav-tree" class="py-4">
+    <div class="px-5 text-slate-500 text-xs py-4">Loading curriculum...</div>
+  </nav>
+</aside>
+
+<!-- =============================================
+     MAIN CONTENT AREA
+     ============================================= -->
+<main id="main-content">
+
+  <!-- Top Header Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="flex items-center justify-between px-4 py-3">
+      <!-- Mobile Hamburger -->
+      <button onclick="toggleSidebar()" class="md:hidden p-2 rounded-lg hover:bg-slate-100 transition">
+        <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+        </svg>
+      </button>
+
+      <!-- Breadcrumb -->
+      <div id="breadcrumb" class="breadcrumb flex items-center flex-wrap gap-0 text-sm">
+        <span>Select a chapter to begin</span>
+      </div>
+
+      <!-- Admin Link -->
+      <a href="admin.html" target="_blank"
+         class="text-xs font-semibold text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 px-3 py-1.5 rounded-lg transition">
+        Admin ↗
+      </a>
+    </div>
+  </header>
+
+  <!-- Page Content -->
+  <div id="page-content" class="p-4 md:p-6 max-w-7xl mx-auto">
+    <!-- Welcome Screen (shown before chapter selection) -->
+    <div id="welcome-screen" class="fade-in">
+      <div class="text-center py-20">
+        <div class="text-7xl mb-6">📚</div>
+        <h1 class="text-3xl font-bold text-slate-800 mb-3">Welcome to EduLearn</h1>
+        <p class="text-slate-500 text-lg mb-8 max-w-md mx-auto">Select a class, subject, and chapter from the sidebar to start learning.</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-2xl mx-auto text-left">
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <div class="text-2xl mb-2">🎥</div>
+            <div class="font-semibold text-slate-700 mb-1">Video Lessons</div>
+            <div class="text-slate-400 text-sm">Watch curated video content with auto-play playlist</div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <div class="text-2xl mb-2">🧠</div>
+            <div class="font-semibold text-slate-700 mb-1">MCQ Quizzes</div>
+            <div class="text-slate-400 text-sm">Test your knowledge with instant-feedback quizzes</div>
+          </div>
+          <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+            <div class="text-2xl mb-2">✍️</div>
+            <div class="font-semibold text-slate-700 mb-1">Written Q&A</div>
+            <div class="text-slate-400 text-sm">Practice descriptive questions with model answers</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chapter Content (hidden until chapter selected) -->
+    <div id="chapter-content" class="hidden fade-in"></div>
+  </div>
+</main>
+
+<!-- =============================================
+     JAVASCRIPT — FULL LMS ENGINE
+     ============================================= -->
+<script>
+/* ======================================
+   STATE MANAGEMENT
+   ====================================== */
+let db = { classes: [] };            // Full JSON database
+let currentClass = null;             // Selected class object
+let currentSubject = null;           // Selected subject object
+let currentChapter = null;           // Selected chapter object
+let currentVideoIndex = 0;           // Active video in playlist
+let mcqAnswers = {};                 // User MCQ answers { mcqId: optionIndex }
+let mcqSubmitted = false;            // Whether quiz was submitted
+let revealedCQs = {};                // Which CQs have shown answer
+
+/* ======================================
+   INIT — Load JSON and build sidebar
+   ====================================== */
+async function init() {
+  try {
+    // Load from localStorage first (admin changes), fallback to JSON file
+    const stored = localStorage.getItem('lmsData');
+    if (stored) {
+      db = JSON.parse(stored);
+    } else {
+      const res = await fetch('videos.json');
+      if (!res.ok) throw new Error('Failed to load videos.json');
+      db = await res.json();
+    }
+    buildSidebar();
+  } catch (err) {
+    console.error('Init error:', err);
+    document.getElementById('nav-tree').innerHTML =
+      `<div class="px-5 py-4 text-red-400 text-sm">⚠️ Could not load data.<br>Make sure videos.json is in the same folder.</div>`;
+  }
+}
+
+/* ======================================
+   SIDEBAR — Build navigation tree
+   ====================================== */
+function buildSidebar() {
+  const nav = document.getElementById('nav-tree');
+  let html = '';
+
+  db.classes.forEach(cls => {
+    html += `
+      <div class="mb-2">
+        <button class="nav-class-btn" onclick="toggleClass('${cls.id}')">
+          <span class="mr-2">🏫</span>${cls.name}
+        </button>
+        <div id="cls-${cls.id}" class="hidden">`;
+
+    cls.subjects.forEach(sub => {
+      html += `
+          <button class="nav-subject-btn" onclick="toggleSubject('${cls.id}','${sub.id}')">
+            <span class="mr-2">${sub.icon || '📘'}</span>${sub.name}
+          </button>
+          <div id="sub-${sub.id}" class="hidden">`;
+
+      sub.chapters.forEach(ch => {
+        html += `
+            <button class="nav-chapter-btn" id="chbtn-${ch.id}"
+                    onclick="selectChapter('${cls.id}','${sub.id}','${ch.id}')">
+              📄 ${ch.name}
+            </button>`;
+      });
+
+      html += `</div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  nav.innerHTML = html;
+}
+
+/* Toggle class dropdown in sidebar */
+function toggleClass(classId) {
+  const el = document.getElementById(`cls-${classId}`);
+  el.classList.toggle('hidden');
+}
+
+/* Toggle subject dropdown in sidebar */
+function toggleSubject(classId, subjectId) {
+  const el = document.getElementById(`sub-${subjectId}`);
+  el.classList.toggle('hidden');
+}
+
+/* ======================================
+   SELECT CHAPTER — Main loader
+   ====================================== */
+function selectChapter(classId, subjectId, chapterId) {
+  // Resolve objects from db
+  currentClass   = db.classes.find(c => c.id === classId);
+  currentSubject = currentClass.subjects.find(s => s.id === subjectId);
+  currentChapter = currentSubject.chapters.find(c => c.id === chapterId);
+
+  // Reset state
+  currentVideoIndex = 0;
+  mcqAnswers = {};
+  mcqSubmitted = false;
+  revealedCQs = {};
+
+  // Highlight active chapter in sidebar
+  document.querySelectorAll('.nav-chapter-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`chbtn-${chapterId}`).classList.add('active');
+
+  // Update breadcrumb
+  updateBreadcrumb();
+
+  // Show chapter UI
+  document.getElementById('welcome-screen').classList.add('hidden');
+  const cc = document.getElementById('chapter-content');
+  cc.classList.remove('hidden');
+  cc.innerHTML = buildChapterHTML();
+
+  // Init first video
+  if (currentChapter.videos.length > 0) {
+    loadVideo(0);
+  }
+
+  // Close mobile sidebar
+  closeSidebar();
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+/* ======================================
+   BREADCRUMB
+   ====================================== */
+function updateBreadcrumb() {
+  document.getElementById('breadcrumb').innerHTML = `
+    <span>${currentClass.name}</span>
+    <span class="breadcrumb-sep">›</span>
+    <span>${currentSubject.icon} ${currentSubject.name}</span>
+    <span class="breadcrumb-sep">›</span>
+    <span class="active">${currentChapter.name}</span>
+  `;
+}
+
+/* ======================================
+   BUILD CHAPTER HTML — All sections
+   ====================================== */
+function buildChapterHTML() {
+  const ch = currentChapter;
+  const hasVideos = ch.videos.length > 0;
+  const hasPDFs   = ch.pdfs.length > 0;
+  const hasMCQs   = ch.mcqs.length > 0;
+  const hasCQs    = ch.cqs.length > 0;
+  const hasExam   = ch.examLink && ch.examLink.trim() !== '';
+
+  // Build tab buttons
+  let tabs = '';
+  if (hasVideos) tabs += `<button class="tab-btn active" onclick="switchTab('videos',this)">🎥 Videos (${ch.videos.length})</button>`;
+  if (hasPDFs)   tabs += `<button class="tab-btn" onclick="switchTab('pdfs',this)">📄 PDFs (${ch.pdfs.length})</button>`;
+  if (hasMCQs)   tabs += `<button class="tab-btn" onclick="switchTab('mcqs',this)">🧠 MCQ Quiz (${ch.mcqs.length})</button>`;
+  if (hasCQs)    tabs += `<button class="tab-btn" onclick="switchTab('cqs',this)">✍️ Written Q&A (${ch.cqs.length})</button>`;
+  if (hasExam)   tabs += `<button class="tab-btn" onclick="switchTab('exam',this)">📝 Exam</button>`;
+
+  // If nothing exists
+  if (!tabs) tabs = `<span class="text-slate-400 text-sm px-4">No content added yet</span>`;
+
+  return `
+    <!-- Chapter Header -->
+    <div class="mb-5">
+      <h2 class="text-2xl font-bold text-slate-800">${ch.name}</h2>
+      <p class="text-slate-500 text-sm mt-1">${currentSubject.icon} ${currentSubject.name} · ${currentClass.name}</p>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="flex gap-1 border-b border-slate-200 mb-6 overflow-x-auto pb-0">
+      ${tabs}
+    </div>
+
+    <!-- VIDEO TAB -->
+    <div id="tab-videos" class="${hasVideos ? '' : 'hidden'}">
+      ${buildVideosTab()}
+    </div>
+
+    <!-- PDF TAB -->
+    <div id="tab-pdfs" class="hidden">
+      ${buildPDFsTab()}
+    </div>
+
+    <!-- MCQ TAB -->
+    <div id="tab-mcqs" class="hidden">
+      ${buildMCQsTab()}
+    </div>
+
+    <!-- CQ TAB -->
+    <div id="tab-cqs" class="hidden">
+      ${buildCQsTab()}
+    </div>
+
+    <!-- EXAM TAB -->
+    <div id="tab-exam" class="hidden">
+      ${buildExamTab()}
+    </div>
+  `;
+}
+
+/* ======================================
+   TAB SWITCHER
+   ====================================== */
+function switchTab(tabName, btn) {
+  // Hide all tab panels
+  ['videos','pdfs','mcqs','cqs','exam'].forEach(t => {
+    const el = document.getElementById(`tab-${t}`);
+    if (el) el.classList.add('hidden');
+  });
+
+  // Remove active from all tab buttons
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+
+  // Show selected tab
+  const target = document.getElementById(`tab-${tabName}`);
+  if (target) { target.classList.remove('hidden'); target.classList.add('fade-in'); }
+  btn.classList.add('active');
+}
+
+/* ======================================
+   BUILD: VIDEOS TAB
+   ====================================== */
+function buildVideosTab() {
+  const videos = currentChapter.videos;
+  if (videos.length === 0) return `<p class="text-slate-400">No videos in this chapter.</p>`;
+
+  // Playlist items
+  let playlistHTML = videos.map((v, i) => `
+    <div class="playlist-item ${i === 0 ? 'active' : ''}" id="pl-${i}" onclick="loadVideo(${i})">
+      <div class="flex items-start gap-3">
+        <div class="video-num">${i + 1}</div>
+        <div class="flex-1 min-w-0">
+          <div class="font-medium text-slate-800 text-sm leading-tight line-clamp-2">${v.title}</div>
+          ${v.description ? `<div class="text-slate-400 text-xs mt-1 line-clamp-1">${v.description}</div>` : ''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="flex flex-col lg:flex-row gap-5">
+      <!-- Main Video Player -->
+      <div class="flex-1">
+        <div class="bg-black rounded-2xl overflow-hidden aspect-video shadow-lg">
+          <iframe id="video-player" width="100%" height="100%"
+            src="" frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen class="w-full h-full"></iframe>
+        </div>
+        <!-- Video Info -->
+        <div class="mt-4 bg-white rounded-2xl p-4 border border-slate-200">
+          <h3 id="video-title" class="font-bold text-slate-800 text-lg"></h3>
+          <p id="video-desc" class="text-slate-500 text-sm mt-1"></p>
+          <!-- Navigation buttons -->
+          <div class="flex gap-3 mt-4">
+            <button onclick="loadVideo(currentVideoIndex - 1)"
+                    class="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold text-slate-700 transition">
+              ← Prev
+            </button>
+            <button onclick="loadVideo(currentVideoIndex + 1)"
+                    class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm font-semibold text-white transition">
+              Next →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Playlist Sidebar -->
+      <div class="lg:w-72 xl:w-80">
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <span class="font-bold text-slate-700 text-sm">Playlist</span>
+            <span class="text-xs text-slate-400">${videos.length} videos</span>
+          </div>
+          <div class="p-3 max-h-96 lg:max-h-[500px] overflow-y-auto">
+            ${playlistHTML}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+/* Load a video by index */
+function loadVideo(index) {
+  const videos = currentChapter.videos;
+  if (index < 0 || index >= videos.length) return;
+
+  currentVideoIndex = index;
+  const video = videos[index];
+
+  // Convert YouTube URL to embed
+  const embedUrl = toEmbedUrl(video.youtubeLink);
+
+  // Update iframe
+  const player = document.getElementById('video-player');
+  if (player) player.src = embedUrl + '?autoplay=1&rel=0';
+
+  // Update info
+  const titleEl = document.getElementById('video-title');
+  const descEl  = document.getElementById('video-desc');
+  if (titleEl) titleEl.textContent = video.title;
+  if (descEl)  descEl.textContent  = video.description || '';
+
+  // Update playlist highlight
+  document.querySelectorAll('.playlist-item').forEach((el, i) => {
+    el.classList.toggle('active', i === index);
+  });
+}
+
+/* Convert YouTube watch URL → embed URL */
+function toEmbedUrl(url) {
+  if (!url) return '';
+  // Already an embed link
+  if (url.includes('youtube.com/embed/')) return url;
+  // Standard watch link
+  const match = url.match(/[?&]v=([^&#]+)/);
+  if (match) return `https://www.youtube.com/embed/${match[1]}`;
+  // Short link youtu.be/ID
+  const shortMatch = url.match(/youtu\.be\/([^?&#]+)/);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  // Google Drive
+  if (url.includes('drive.google.com')) return url;
+  return url;
+}
+
+/* ======================================
+   BUILD: PDF TAB
+   ====================================== */
+function buildPDFsTab() {
+  const pdfs = currentChapter.pdfs;
+  if (pdfs.length === 0) return `<p class="text-slate-400">No PDFs in this chapter.</p>`;
+
+  return pdfs.map(pdf => `
+    <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden mb-5">
+      <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div class="flex items-center gap-3">
+          <span class="text-2xl">📄</span>
+          <span class="font-bold text-slate-800">${pdf.title}</span>
+        </div>
+        <a href="${pdf.downloadLink}" target="_blank"
+           class="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg transition">
+          ⬇ Download
+        </a>
+      </div>
+      <div class="w-full" style="height: 600px;">
+        <iframe src="${pdf.driveLink}" width="100%" height="100%" frameborder="0"
+                allow="autoplay" class="w-full h-full"></iframe>
+      </div>
+    </div>
+  `).join('');
+}
+
+/* ======================================
+   BUILD: MCQ TAB
+   ====================================== */
+function buildMCQsTab() {
+  const mcqs = currentChapter.mcqs;
+  if (mcqs.length === 0) return `<p class="text-slate-400">No MCQs in this chapter.</p>`;
+
+  let html = `
+    <div class="max-w-3xl">
+      <!-- Progress -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 mb-5">
+        <div class="flex items-center justify-between mb-3">
+          <span class="font-bold text-slate-700">Quiz Progress</span>
+          <span id="mcq-progress-text" class="text-sm text-slate-500">0 / ${mcqs.length} answered</span>
+        </div>
+        <div class="progress-bar">
+          <div id="mcq-progress-fill" class="progress-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <!-- Questions -->
+      <div id="mcq-list">
+  `;
+
+  mcqs.forEach((mcq, qi) => {
+    html += `
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 mb-4 fade-in" id="mcq-card-${mcq.id}">
+        <div class="flex items-start gap-3 mb-4">
+          <span class="flex-shrink-0 w-7 h-7 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold">${qi + 1}</span>
+          <p class="font-semibold text-slate-800 text-base leading-relaxed">${mcq.question}</p>
+        </div>
+        <div class="space-y-2" id="opts-${mcq.id}">
+    `;
+    const letters = ['A','B','C','D'];
+    mcq.options.forEach((opt, oi) => {
+      html += `
+          <div class="mcq-option" id="opt-${mcq.id}-${oi}" onclick="selectMCQ('${mcq.id}',${oi},${mcq.correct})">
+            <span class="w-6 h-6 rounded-full border-2 border-slate-300 flex items-center justify-center text-xs font-bold text-slate-500 flex-shrink-0">${letters[oi]}</span>
+            <span class="text-slate-700">${opt}</span>
+          </div>`;
+    });
+    html += `
+        </div>
+        <div id="mcq-feedback-${mcq.id}" class="mt-3 hidden text-sm font-semibold"></div>
+      </div>
+    `;
+  });
+
+  html += `
+      </div>
+
+      <!-- Action Buttons -->
+      <div id="mcq-actions" class="flex gap-3">
+        <button onclick="submitMCQ()"
+                class="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-sm">
+          Submit Quiz
+        </button>
+        <button onclick="resetMCQ()"
+                class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+          Reset
+        </button>
+      </div>
+
+      <!-- Score Card (hidden until submitted) -->
+      <div id="mcq-score" class="hidden mt-5 fade-in"></div>
+    </div>
+  `;
+  return html;
+}
+
+/* Select an MCQ option */
+function selectMCQ(mcqId, optionIndex, correct) {
+  if (mcqSubmitted) return;
+
+  // Record answer
+  mcqAnswers[mcqId] = optionIndex;
+
+  // Update UI for this question
+  const mcq = currentChapter.mcqs.find(m => m.id === mcqId);
+  mcq.options.forEach((_, oi) => {
+    const el = document.getElementById(`opt-${mcqId}-${oi}`);
+    el.classList.remove('selected');
+  });
+  document.getElementById(`opt-${mcqId}-${optionIndex}`).classList.add('selected');
+
+  // Update progress bar
+  updateMCQProgress();
+}
+
+/* Update MCQ progress bar */
+function updateMCQProgress() {
+  const total   = currentChapter.mcqs.length;
+  const answered = Object.keys(mcqAnswers).length;
+  const pct = (answered / total) * 100;
+  document.getElementById('mcq-progress-fill').style.width = pct + '%';
+  document.getElementById('mcq-progress-text').textContent = `${answered} / ${total} answered`;
+}
+
+/* Submit MCQ quiz */
+function submitMCQ() {
+  mcqSubmitted = true;
+  const mcqs  = currentChapter.mcqs;
+  let score   = 0;
+
+  mcqs.forEach(mcq => {
+    const userAns = mcqAnswers[mcq.id];
+    const opts    = mcq.options;
+    const correct = mcq.correct;
+
+    // Style each option
+    opts.forEach((_, oi) => {
+      const el = document.getElementById(`opt-${mcq.id}-${oi}`);
+      el.onclick = null; // disable clicking
+      if (oi === correct) {
+        el.classList.add('correct-ans');
+      } else if (oi === userAns && userAns !== correct) {
+        el.classList.add('wrong-ans');
+      }
+    });
+
+    // Feedback label
+    const fb = document.getElementById(`mcq-feedback-${mcq.id}`);
+    if (fb) {
+      if (userAns === undefined) {
+        fb.textContent = '⚠️ Not answered';
+        fb.className = 'mt-3 text-sm font-semibold text-amber-600';
+      } else if (userAns === correct) {
+        fb.textContent = '✅ Correct!';
+        fb.className = 'mt-3 text-sm font-semibold text-green-600';
+        score++;
+      } else {
+        fb.textContent = `❌ Incorrect — Correct: ${opts[correct]}`;
+        fb.className = 'mt-3 text-sm font-semibold text-red-600';
+      }
+      fb.classList.remove('hidden');
+    }
+  });
+
+  // Show score card
+  const pct = Math.round((score / mcqs.length) * 100);
+  const emoji = pct >= 80 ? '🏆' : pct >= 60 ? '👍' : pct >= 40 ? '📚' : '💪';
+  const msg   = pct >= 80 ? 'Excellent work!' : pct >= 60 ? 'Good job!' : pct >= 40 ? 'Keep studying!' : 'More practice needed!';
+
+  document.getElementById('mcq-score').innerHTML = `
+    <div class="score-card">
+      <div class="text-5xl mb-3">${emoji}</div>
+      <div class="text-3xl font-bold mb-1">${score} / ${mcqs.length}</div>
+      <div class="text-blue-200 text-lg mb-2">${pct}% — ${msg}</div>
+      <div class="bg-white bg-opacity-20 rounded-full h-2 mt-4">
+        <div class="bg-white rounded-full h-2 transition-all" style="width:${pct}%"></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('mcq-score').classList.remove('hidden');
+
+  // Update action buttons
+  document.getElementById('mcq-actions').innerHTML = `
+    <button onclick="resetMCQ()"
+            class="px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition">
+      Try Again
+    </button>
+  `;
+
+  // Scroll to score
+  document.getElementById('mcq-score').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+/* Reset MCQ quiz */
+function resetMCQ() {
+  mcqAnswers   = {};
+  mcqSubmitted = false;
+  // Re-render MCQ tab
+  const tab = document.getElementById('tab-mcqs');
+  if (tab) { tab.innerHTML = buildMCQsTab(); tab.classList.add('fade-in'); }
+}
+
+/* ======================================
+   BUILD: CQ TAB
+   ====================================== */
+function buildCQsTab() {
+  const cqs = currentChapter.cqs;
+  if (cqs.length === 0) return `<p class="text-slate-400">No written questions in this chapter.</p>`;
+
+  let html = `<div class="max-w-3xl space-y-5">`;
+
+  cqs.forEach((cq, qi) => {
+    const hasAnswer = cq.answer && cq.answer.trim() !== '';
+    html += `
+      <div class="cq-card">
+        <!-- Question -->
+        <div class="p-5">
+          <div class="flex items-start gap-3 mb-4">
+            <span class="flex-shrink-0 px-2.5 py-0.5 bg-blue-100 text-blue-700 rounded-full text-xs font-bold">Q${qi + 1}</span>
+            <p class="font-semibold text-slate-800 leading-relaxed">${cq.question}</p>
+          </div>
+          <button onclick="revealCQ('${cq.id}', ${hasAnswer})"
+                  class="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-semibold rounded-lg border border-blue-200 transition">
+            💡 Show Answer
+          </button>
+        </div>
+
+        <!-- Answer (hidden) -->
+        <div id="ans-${cq.id}" class="hidden px-5 pb-5">
+          <div class="flex items-center gap-2 mb-2">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-wide">Model Answer</span>
+            ${!hasAnswer ? `<span class="ai-badge">✨ AI Suggested</span>` : ''}
+          </div>
+          <div class="answer-box">
+            ${hasAnswer ? escapeHTML(cq.answer) : generateAIAnswer(cq.question)}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+  return html;
+}
+
+/* Reveal CQ answer */
+function revealCQ(cqId, hasAnswer) {
+  const ansEl = document.getElementById(`ans-${cqId}`);
+  if (!ansEl) return;
+  ansEl.classList.toggle('hidden');
+  ansEl.classList.add('fade-in');
+}
+
+/* Simulate AI-generated answer for empty CQ answers */
+function generateAIAnswer(question) {
+  return `<span class="text-slate-400 italic">
+    This is an AI-simulated answer for: "${escapeHTML(question)}"<br><br>
+    To provide a complete answer, consider the following approach:<br>
+    1. Define the key terms in the question.<br>
+    2. Explain the concept with relevant examples.<br>
+    3. Use diagrams or formulas if applicable.<br>
+    4. Conclude with a summary of your main points.<br><br>
+    <em>Note: Add a proper answer in Admin → Chapter → CQ section for accurate content.</em>
+  </span>`;
+}
+
+/* ======================================
+   BUILD: EXAM TAB
+   ====================================== */
+function buildExamTab() {
+  const link = currentChapter.examLink;
+  if (!link || link.trim() === '') return `<p class="text-slate-400">No exam configured for this chapter.</p>`;
+
+  return `
+    <div class="max-w-lg mx-auto py-10 text-center">
+      <div class="text-6xl mb-5">📝</div>
+      <h3 class="text-2xl font-bold text-slate-800 mb-3">Chapter Exam</h3>
+      <p class="text-slate-500 mb-8">Ready to test your knowledge? Click below to open the exam in a new tab.</p>
+      <a href="${link}" target="_blank" rel="noopener noreferrer"
+         class="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition shadow-md text-lg">
+        🚀 Start Exam
+      </a>
+      <p class="text-slate-400 text-sm mt-6">Opens in Google Forms · Make sure you're signed in</p>
+    </div>
+  `;
+}
+
+/* ======================================
+   UTILITIES
+   ====================================== */
+function escapeHTML(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/* ======================================
+   MOBILE SIDEBAR TOGGLE
+   ====================================== */
+function toggleSidebar() {
+  const sidebar  = document.getElementById('sidebar');
+  const overlay  = document.getElementById('overlay');
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('show');
+}
+
+/* ======================================
+   START THE APP
+   ====================================== */
+init();
+</script>
+</body>
+</html>
